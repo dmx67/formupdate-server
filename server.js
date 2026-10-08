@@ -75,7 +75,7 @@ function ecdhSharedSecret(clientPubRawB64) {
     privateKey: serverEph,
     publicKey: clientKey
   });
-  const serverPubRaw = serverEph.export({ type: "spki", format: "der" }).subarray(-65);
+  const serverPubRaw = crypto.createPublicKey(serverEph).export({ type: "spki", format: "der" }).subarray(-65);
   return { shared, serverPubRaw };
 }
 
