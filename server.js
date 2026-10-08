@@ -68,14 +68,11 @@ function rawEcToNodeKey(rawB64) {
 
 function ecdhSharedSecret(clientPubRawB64) {
   const clientKey = rawEcToNodeKey(clientPubRawB64);
-  const { privateKey: serverEph } = crypto.generateKeyPairSync("ec", {
-    namedCurve: "prime256v1"
-  });
   const shared = crypto.diffieHellman({
-    privateKey: serverEph,
+    privateKey: SIGNING.privateKey,
     publicKey: clientKey
   });
-  const serverPubRaw = crypto.createPublicKey(serverEph).export({ type: "spki", format: "der" }).subarray(-65);
+  const serverPubRaw = Buffer.from(SIGNING.publicRawB64, "base64");
   return { shared, serverPubRaw };
 }
 
