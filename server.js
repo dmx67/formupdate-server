@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, "store.json");
 const PORT = process.env.PORT || 8787;
 
-/* ───────── Signing key (server identity) ───────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Signing key (server identity) â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 let SIGNING = loadSigningKey();
 
@@ -50,7 +50,7 @@ function signString(str) {
   }).toString("base64");
 }
 
-/* ───────── ECDH + HKDF + AES-GCM ───────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ ECDH + HKDF + AES-GCM â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function rawEcToNodeKey(rawB64) {
   const raw = Buffer.from(rawB64, "base64");
@@ -101,7 +101,7 @@ function aesGcmEncrypt(key, iv, plaintextStr) {
   return { ct, tag: c.getAuthTag() };
 }
 
-/* ───────── Persistent store ───────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Persistent store â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 let DB = fs.existsSync(DB_PATH)
   ? JSON.parse(fs.readFileSync(DB_PATH, "utf8"))
@@ -116,7 +116,7 @@ function save() {
   fs.writeFileSync(DB_PATH, JSON.stringify(DB, null, 2));
 }
 
-/* ───────── Envelope helpers ───────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Envelope helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function openEnvelope(envelope) {
   if (!envelope || envelope.version !== 2) throw new Error("bad_envelope_version");
@@ -160,7 +160,7 @@ function sealResponse(aesKey, serverPubRawB64, requestId, plaintextObj) {
   return envelope;
 }
 
-/* ───────── Sessions + user accounts ───────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Sessions + user accounts â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 const STARTER_TOKENS = 50000;
 const COST_PER_CHARGE = 1500;
@@ -188,7 +188,7 @@ function getOrCreateSession(extensionId, fingerprint) {
   return s;
 }
 
-/* ───────── Express ───────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Express â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
@@ -203,11 +203,11 @@ app.get("/g/xk", (_req, res) => {
   });
 });
 
-/* ───────── /g/xa  →  login / register ───────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ /g/xa  â†’  login / register â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 app.post("/g/xa", handle(openEnvelope, async (body) => {
   const { username, password } = body;
 
-  // No credentials → anonymous session (backward compatible)
+  // No credentials â†’ anonymous session (backward compatible)
   if (!username || !password) {
     const s = getOrCreateSession(null, body.fingerprint);
     const leaseId = newLeaseId();
@@ -224,7 +224,7 @@ app.post("/g/xa", handle(openEnvelope, async (body) => {
     };
   }
 
-  // With credentials → register if new, else log in
+  // With credentials â†’ register if new, else log in
   let user = DB.users[username];
 
   if (!user) {
@@ -422,7 +422,7 @@ app.post("/g/xc", handle(openEnvelope, async () => ({
   telegram: "@formupdate_support"
 })));
 
-/* ───────── Handler wrapper ───────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Handler wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function httpError(status, reason) {
   const e = new Error(reason);
@@ -432,18 +432,22 @@ function httpError(status, reason) {
 
 function handle(opener, fn) {
   return async (req, res) => {
+    let stage = "validate_request";
     try {
       const envelope = req.body;
       if (!envelope || typeof envelope !== "object") {
         return res.status(400).json({ error: "bad_request" });
       }
+      stage = "decrypt_request";
       const { body, aesKey, serverPubRawB64 } = opener(envelope);
+      stage = "run_handler";
       const eid = req.header("X-EID") || body.extensionId || null;
       const session = eid && DB.sessions[eid] ? DB.sessions[eid] : null;
       const out = await fn(body, session);
+      stage = "encrypt_response";
       res.json(sealResponse(aesKey, serverPubRawB64, envelope.request_id, out));
     } catch (err) {
-      console.error("SERVER ERROR:", err.message);
+      console.error("SERVER ERROR stage=" + stage + " method=" + req.method + " path=" + req.path + " message=" + (err.message || "unknown"));
       res.status(err.status || 500).json({
         error: err.message || "server_error",
         reason: err.message || "server_error"
