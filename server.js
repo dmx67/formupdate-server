@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import crypto from "node:crypto";
@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, "store.json");
 const PORT = process.env.PORT || 8787;
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Signing key (server identity) â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Signing key (server identity) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 let SIGNING = loadSigningKey();
 
@@ -53,11 +53,11 @@ function loadSigningKey() {
 function signString(str) {
   return crypto.sign("sha256", Buffer.from(str, "utf8"), {
     key: SIGNING.privateKey,
-    dsaEncoding: "der"
+    dsaEncoding: "ieee-p1363"
   }).toString("base64");
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ ECDH + HKDF + AES-GCM â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ ECDH + HKDF + AES-GCM Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 function rawEcToNodeKey(rawB64) {
   const raw = Buffer.from(rawB64, "base64");
@@ -108,7 +108,7 @@ function aesGcmEncrypt(key, iv, plaintextStr) {
   return { ct, tag: c.getAuthTag() };
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Persistent store â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Persistent store Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 let DB = fs.existsSync(DB_PATH)
   ? JSON.parse(fs.readFileSync(DB_PATH, "utf8"))
@@ -123,7 +123,7 @@ function save() {
   fs.writeFileSync(DB_PATH, JSON.stringify(DB, null, 2));
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Envelope helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Envelope helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 function openEnvelope(envelope) {
   if (!envelope || envelope.version !== 2) throw new Error("bad_envelope_version");
@@ -167,7 +167,7 @@ function sealResponse(aesKey, serverPubRawB64, requestId, plaintextObj) {
   return envelope;
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Sessions + user accounts â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Sessions + user accounts Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 const STARTER_TOKENS = 50000;
 const COST_PER_CHARGE = 1500;
@@ -195,7 +195,7 @@ function getOrCreateSession(extensionId, fingerprint) {
   return s;
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Express â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Express Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
@@ -210,11 +210,11 @@ app.get("/g/xk", (_req, res) => {
   });
 });
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ /g/xa  â†’  login / register â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ /g/xa  Ã¢â€ â€™  login / register Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 app.post("/g/xa", handle(openEnvelope, async (body) => {
   const { username, password } = body;
 
-  // No credentials â†’ anonymous session (backward compatible)
+  // No credentials Ã¢â€ â€™ anonymous session (backward compatible)
   if (!username || !password) {
     const s = getOrCreateSession(null, body.fingerprint);
     const leaseId = newLeaseId();
@@ -231,7 +231,7 @@ app.post("/g/xa", handle(openEnvelope, async (body) => {
     };
   }
 
-  // With credentials â†’ register if new, else log in
+  // With credentials Ã¢â€ â€™ register if new, else log in
   let user = DB.users[username];
 
   if (!user) {
@@ -429,7 +429,7 @@ app.post("/g/xc", handle(openEnvelope, async () => ({
   telegram: "@formupdate_support"
 })));
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€ Handler wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Handler wrapper Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 function httpError(status, reason) {
   const e = new Error(reason);
@@ -467,3 +467,4 @@ app.listen(PORT, () => {
   console.log(`formUpdate server listening on http://localhost:${PORT}`);
   console.log(`Server public key (raw b64): ${SIGNING.publicRawB64}`);
 });
+
