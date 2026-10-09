@@ -16,31 +16,38 @@ let SIGNING = loadSigningKey();
 
 function loadSigningKey() {
   const keyPath = path.join(__dirname, "signing.json");
-  if (fs.existsSync(keyPath)) {
+  let privateKey;
+
+  // Prefer a stable Render environment secret. The value is base64-encoded PEM
+  // so it can be stored safely as a single-line environment variable.
+  const privatePemB64 = process.env.SIGNING_PRIVATE_KEY_B64;
+  if (privatePemB64) {
+    privateKey = crypto.createPrivateKey(
+      Buffer.from(privatePemB64, "base64").toString("utf8")
+    );
+  } else if (fs.existsSync(keyPath)) {
     const j = JSON.parse(fs.readFileSync(keyPath, "utf8"));
-    return {
-      privateKey: crypto.createPrivateKey(j.privatePem),
-      publicKey: crypto.createPublicKey(j.publicPem),
-      publicRawB64: j.publicRawB64
+    privateKey = crypto.createPrivateKey(j.privatePem);
+  } else {
+    const generated = crypto.generateKeyPairSync("ec", {
+      namedCurve: "prime256v1"
+    });
+    privateKey = generated.privateKey;
+    const publicKey = generated.publicKey;
+    const der = publicKey.export({ type: "spki", format: "der" });
+    const publicRawB64 = der.subarray(der.length - 65).toString("base64");
+    const j = {
+      privatePem: privateKey.export({ type: "pkcs8", format: "pem" }),
+      publicPem: publicKey.export({ type: "spki", format: "pem" }),
+      publicRawB64
     };
+    fs.writeFileSync(keyPath, JSON.stringify(j, null, 2));
   }
-  const { privateKey, publicKey } = crypto.generateKeyPairSync("ec", {
-    namedCurve: "prime256v1"
-  });
+
+  const publicKey = crypto.createPublicKey(privateKey);
   const der = publicKey.export({ type: "spki", format: "der" });
-  const raw = der.subarray(der.length - 65);
-  const publicRawB64 = raw.toString("base64");
-  const j = {
-    privatePem: privateKey.export({ type: "pkcs8", format: "pem" }),
-    publicPem: publicKey.export({ type: "spki", format: "pem" }),
-    publicRawB64
-  };
-  fs.writeFileSync(keyPath, JSON.stringify(j, null, 2));
-  return {
-    privateKey: crypto.createPrivateKey(j.privatePem),
-    publicKey: crypto.createPublicKey(j.publicPem),
-    publicRawB64
-  };
+  const publicRawB64 = der.subarray(der.length - 65).toString("base64");
+  return { privateKey, publicKey, publicRawB64 };
 }
 
 function signString(str) {
